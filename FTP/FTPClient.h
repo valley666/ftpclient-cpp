@@ -166,6 +166,8 @@ class CFTPClient {
 
    bool UploadFile(const std::string &strLocalFile, const std::string &strRemoteFile, const bool &bCreateDir = false) const;
 
+   bool RenameFile(const std::string &oldFile, const std::string &newFile) const;
+
    // SSL certs
    void SetSSLCertFile(const std::string &strPath) { m_strSSLCertFile = strPath; }
    std::string GetSSLCertFile() const { return m_strSSLCertFile; }

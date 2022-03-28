@@ -32,7 +32,7 @@
 #include "SHA1.h"
 #include "SimpleIni.h"
 
-bool GlobalTestInit(const std::string& strConfFile);
+bool GlobalTestInit();
 void GlobalTestCleanUp(void);
 
 void TimeStampTest(std::ostringstream& ssTimestamp);

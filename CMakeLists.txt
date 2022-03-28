@@ -21,7 +21,7 @@ else()
 	add_definitions(-DWINDOWS)
 endif()
 
-option(SKIP_TESTS_BUILD "Skip tests build" ON)
+option(SKIP_TESTS_BUILD "Skip tests build" OFF)
 
 include_directories(FTP)
 
@@ -35,7 +35,7 @@ enable_testing ()
 
 # test if the test INI file exist, otherwise default it to the one in TestFTP folder
 IF (NOT TEST_INI_FILE)
-    SET(TEST_INI_FILE "./TestFTP/template_test_conf.ini")
+    SET(TEST_INI_FILE " ${CMAKE_SOURCE_DIR}/TestFTP/template_test_conf.ini")
     MESSAGE(WARNING "You didn't provide an INI test configuration file.\
     Defaulting TEST_INI_FILE to ./TestFTP/template_test_conf.ini")
 ENDIF()

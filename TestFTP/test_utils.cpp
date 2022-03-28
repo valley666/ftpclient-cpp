@@ -34,9 +34,12 @@ std::string PROXY_SERVER_FAKE;
 
 std::mutex g_mtxConsoleMutex;
 
-bool GlobalTestInit(const std::string& strConfFile) {
+bool GlobalTestInit() {
+   const std::string& strConfFile = "./TestFTP/template_test_conf.ini";
+
    CSimpleIniA ini;
-   ini.LoadFile(strConfFile.c_str());
+   if(SI_OK != ini.LoadFile(strConfFile.c_str()))
+      return false;
 
    std::string strTmp;
    strTmp = ini.GetValue("tests", "ftp", "");
@@ -74,6 +77,7 @@ bool GlobalTestInit(const std::string& strConfFile) {
    SFTP_SERVER_PORT            = atoi(ini.GetValue("sftp", "port", "0"));
    SFTP_USERNAME               = ini.GetValue("sftp", "username", "");
    SFTP_PASSWORD               = ini.GetValue("sftp", "password", "");
+   if(SFTP_PASSWORD.empty())   SFTP_PASSWORD = ' ';
    SFTP_REMOTE_FILE            = ini.GetValue("sftp", "remote_file", "");
    SFTP_REMOTE_FILE_SHA1SUM    = ini.GetValue("sftp", "remote_file_sha1sum", "");
    SFTP_REMOTE_UPLOAD_FOLDER   = ini.GetValue("sftp", "remote_upload_folder", "");

@@ -19,6 +19,8 @@ namespace embeddedmz {
 std::string CFTPClient::s_strCurlTraceLogDirectory;
 #endif
 
+const uint16_t FTP_COMMAND_BUFFER_LEN = 1024;
+
 /**
  * @brief constructor of the FTP client object
  *
@@ -519,6 +521,9 @@ bool CFTPClient::Info(const std::string &strRemoteFile, struct FileInfo &oFileIn
    curl_easy_setopt(m_pCurlSession, CURLOPT_HEADERFUNCTION, ThrowAwayCallback);
    curl_easy_setopt(m_pCurlSession, CURLOPT_HEADER, 0L);
 
+   curl_easy_setopt(m_pCurlSession,CURLOPT_WRITEDATA,0L);
+   curl_easy_setopt(m_pCurlSession,CURLOPT_WRITEFUNCTION,ThrowAwayCallback);
+
    CURLcode res = Perform();
 
    if (CURLE_OK == res) {
@@ -869,6 +874,65 @@ bool CFTPClient::UploadFile(const std::string &strLocalFile, const std::string &
    InputFile.close();
 
    return bRes;
+}
+
+bool CFTPClient::RenameFile(const std::string &oldFile, const std::string &newFile) const
+{
+    if (oldFile.empty() || oldFile.empty()) return false;
+
+    if (!m_pCurlSession) {
+        if (m_eSettingsFlags & ENABLE_LOG) m_oLog(LOG_ERROR_CURL_NOT_INIT_MSG);
+
+        return false;
+    }
+    // Reset is mandatory to avoid bad surprises
+    curl_easy_reset(m_pCurlSession);
+
+    std::ifstream InputFile;
+    std::string strLocalRemoteFile = ParseURL(newFile);
+
+    struct stat file_info;
+    bool bRes = false;
+
+    /* specify target */
+    curl_easy_setopt(m_pCurlSession, CURLOPT_URL, strLocalRemoteFile.c_str());
+
+    struct curl_slist *cmdlist = NULL;
+    char cmd[FTP_COMMAND_BUFFER_LEN];
+    std::string dirLocation;
+    size_t dirPos = oldFile.find_last_of('/');
+    dirLocation = oldFile.substr(0,dirPos);
+    memset(cmd,0,FTP_COMMAND_BUFFER_LEN);
+    snprintf(cmd,FTP_COMMAND_BUFFER_LEN,"CWD %s",dirLocation.c_str());
+    cmdlist = curl_slist_append(cmdlist, cmd);
+
+    memset(cmd,0,FTP_COMMAND_BUFFER_LEN);
+    snprintf(cmd,FTP_COMMAND_BUFFER_LEN,"RNFR %s",oldFile.c_str());
+    cmdlist = curl_slist_append(cmdlist, cmd);
+    memset(cmd,0,FTP_COMMAND_BUFFER_LEN);
+
+    size_t pos = newFile.find_last_of('/');
+    std::string newFileName = newFile.substr(pos+1);
+    snprintf(cmd,FTP_COMMAND_BUFFER_LEN,"RNTO %s",newFileName.c_str());
+    cmdlist = curl_slist_append(cmdlist, cmd);
+
+    curl_easy_setopt(m_pCurlSession, CURLOPT_QUOTE, cmdlist);
+
+    //curl_easy_setopt(m_pCurlSession, CURLOPT_HEADERFUNCTION, ThrowAwayCallback);
+    //curl_easy_setopt(m_pCurlSession, CURLOPT_HEADER, 0L);
+
+    curl_easy_setopt(m_pCurlSession,CURLOPT_WRITEDATA,0L);
+    curl_easy_setopt(m_pCurlSession,CURLOPT_WRITEFUNCTION,ThrowAwayCallback);
+
+    CURLcode res = Perform();
+
+    if (res != CURLE_OK) {
+        if (m_eSettingsFlags & ENABLE_LOG)
+            m_oLog(StringFormat(LOG_ERROR_CURL_UPLOAD_FORMAT, oldFile.c_str(), res, curl_easy_strerror(res)));
+    } else
+        bRes = true;
+
+    return bRes;
 }
 
 /**

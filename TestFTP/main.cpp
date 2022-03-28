@@ -243,7 +243,7 @@ TEST_F(FTPClientTest, TestSaveFileNameWithAccents) {
       
       // Convert file name from ANSI to UTF8
       std::string remoteFileUtf8 = CFTPClient::AnsiToUtf8(FTP_REMOTE_FILE);
-      std::string localFileNameUtf8 = CFTPClient::AnsiToUtf8("fichier_téléchargé");
+      std::string localFileNameUtf8 = CFTPClient::AnsiToUtf8("fichier_tï¿½lï¿½chargï¿½");
 
       ASSERT_TRUE(m_pFTPClient->DownloadFile(localFileNameUtf8, remoteFileUtf8));
 
@@ -252,13 +252,13 @@ TEST_F(FTPClientTest, TestSaveFileNameWithAccents) {
 
       /* check the SHA1 sum of the downloaded file if possible */
       if (!FTP_REMOTE_FILE_SHA1SUM.empty()) {
-         std::string ret = sha1sum("fichier_téléchargé");
+         std::string ret = sha1sum("fichier_tï¿½lï¿½chargï¿½");
          std::transform(ret.begin(), ret.end(), ret.begin(), ::tolower);
          EXPECT_TRUE(FTP_REMOTE_FILE_SHA1SUM == ret);
       }
 
       /* delete test file */
-      EXPECT_TRUE(remove("fichier_téléchargé") == 0);
+      EXPECT_TRUE(remove("fichier_tï¿½lï¿½chargï¿½") == 0);
    } else
       std::cout << "FTP tests are disabled !" << std::endl;
 }
@@ -324,6 +324,7 @@ TEST_F(FTPClientTest, TestDownloadFile10Times) {
    } else
       std::cout << "FTP tests are disabled !" << std::endl;
 }
+
 
 // Check for failure
 TEST_F(FTPClientTest, TestDownloadInexistantFile) {
@@ -420,6 +421,22 @@ TEST_F(FTPClientTest, TestUploadAndRemoveFile) {
       std::cout << "FTP tests are disabled !" << std::endl;
 }
 
+TEST_F(FTPClientTest, TestUploadAndRemoveLargeFile) {
+   if (FTP_TEST_ENABLED) {
+      // to display a beautiful progress bar on console
+      m_pFTPClient->SetProgressFnCallback(m_pFTPClient.get(), &TestUPProgressCallback);
+
+      std::string toUploadFileName = "VMware-player-14.1.7-12989993.exe";
+      // Upload file
+      ASSERT_TRUE(m_pFTPClient->UploadFile(toUploadFileName, FTP_REMOTE_UPLOAD_FOLDER + toUploadFileName));
+
+      // Remove file
+      ASSERT_TRUE(m_pFTPClient->RemoveFile(FTP_REMOTE_UPLOAD_FOLDER + toUploadFileName));
+
+   } else
+      std::cout << "FTP tests are disabled !" << std::endl;
+}
+
 #ifdef WINDOWS
 TEST_F(FTPClientTest, TestUploadFileNameWithAccents) {
    if (FTP_TEST_ENABLED) {
@@ -430,10 +447,10 @@ TEST_F(FTPClientTest, TestUploadFileNameWithAccents) {
       TimeStampTest(ssTimestamp);
 
       // Convert file name from ANSI to UTF8
-      std::string fileNameUtf8 = CFTPClient::AnsiToUtf8("fichier_à_téléverser.txt");
+      std::string fileNameUtf8 = CFTPClient::AnsiToUtf8("fichier_ï¿½_tï¿½lï¿½verser.txt");
 
       // create dummy test file
-      std::ofstream ofTestUpload("fichier_à_téléverser.txt");
+      std::ofstream ofTestUpload("fichier_ï¿½_tï¿½lï¿½verser.txt");
       ASSERT_TRUE(static_cast<bool>(ofTestUpload));
 
       ofTestUpload << "Unit Test TestUploadFile executed on " + ssTimestamp.str() + "\n" +
@@ -461,7 +478,7 @@ TEST_F(FTPClientTest, TestUploadFileNameWithAccents) {
          std::cout << std::endl;
 
          /* check the SHA1 sum of the uploaded file */
-         std::string expectedSha1Sum = sha1sum("fichier_à_téléverser.txt");
+         std::string expectedSha1Sum = sha1sum("fichier_ï¿½_tï¿½lï¿½verser.txt");
          std::string resultSha1Sum   = sha1sum(uploadedFileBytes);
 
          EXPECT_TRUE(expectedSha1Sum == resultSha1Sum);
@@ -471,7 +488,7 @@ TEST_F(FTPClientTest, TestUploadFileNameWithAccents) {
       ASSERT_TRUE(m_pFTPClient->RemoveFile(FTP_REMOTE_UPLOAD_FOLDER + fileNameUtf8));
 
       // delete test file
-      EXPECT_TRUE(remove("fichier_à_téléverser.txt") == 0);
+      EXPECT_TRUE(remove("fichier_ï¿½_tï¿½lï¿½verser.txt") == 0);
    } else
       std::cout << "FTP tests are disabled !" << std::endl;
 }
@@ -527,6 +544,64 @@ TEST_F(FTPClientTest, TestUploadAndRemoveFile10Times) {
 
       // delete test file
       EXPECT_TRUE(remove("test_upload.txt") == 0);
+   } else
+      std::cout << "FTP tests are disabled !" << std::endl;
+}
+
+TEST_F(FTPClientTest, TestUploadAndRename) {
+   if (FTP_TEST_ENABLED) {
+      // to display a beautiful progress bar on console
+      m_pFTPClient->SetProgressFnCallback(m_pFTPClient.get(), &TestUPProgressCallback);
+
+      std::ostringstream ssTimestamp;
+      TimeStampTest(ssTimestamp);
+
+      // create dummy test file
+      std::ofstream ofTestUpload("test_upload.txt");
+      ASSERT_TRUE(static_cast<bool>(ofTestUpload));
+
+      ofTestUpload << "Unit Test TestUploadFile executed on " + ssTimestamp.str() + "\n" +
+      "This file is uploaded via FTPClient-C++ API.\n" +
+      "If this file exists, that means that the unit test is passed.\n";
+      ASSERT_TRUE(static_cast<bool>(ofTestUpload));
+      ofTestUpload.close();
+
+
+      // Upload file and create a directory "upload_test"
+      ASSERT_TRUE(m_pFTPClient->UploadFile("test_upload.txt", FTP_REMOTE_UPLOAD_FOLDER + "upload_test/test_upload.txt", true));
+
+      /* to properly show the progress bar */
+      std::cout << std::endl;
+
+      // Upload file
+      ASSERT_TRUE(m_pFTPClient->UploadFile("test_upload.txt", FTP_REMOTE_UPLOAD_FOLDER + "test_upload.txt"));
+
+      std::cout << std::endl;
+
+      // Rename the upload file
+      ASSERT_TRUE(m_pFTPClient->RenameFile(FTP_REMOTE_UPLOAD_FOLDER+"test_upload.txt", FTP_REMOTE_UPLOAD_FOLDER + "test_upload.txt.tmp"));
+
+      //Remove file
+      ASSERT_TRUE(m_pFTPClient->RemoveFile(FTP_REMOTE_UPLOAD_FOLDER + "test_upload.txt.tmp"));
+
+      // delete test file
+      EXPECT_TRUE(remove("test_upload.txt") == 0);
+   } else
+      std::cout << "FTP tests are disabled !" << std::endl;
+}
+
+TEST_F(FTPClientTest, TestSimpleRename) {
+   if (FTP_TEST_ENABLED) {
+
+      // Rename the exist file
+      ASSERT_TRUE(m_pFTPClient->RenameFile(FTP_REMOTE_UPLOAD_FOLDER+"to_rename.txt", FTP_REMOTE_UPLOAD_FOLDER + "to_rename.txt.tmp"));
+
+      ASSERT_TRUE(m_pFTPClient->RenameFile(FTP_REMOTE_UPLOAD_FOLDER+"to_rename.txt.tmp", FTP_REMOTE_UPLOAD_FOLDER + "to_rename.txt"));
+
+      //Remove file
+      //ASSERT_TRUE(m_pFTPClient->RemoveFile(FTP_REMOTE_UPLOAD_FOLDER + "to_rename.txt.tmp"));
+
+
    } else
       std::cout << "FTP tests are disabled !" << std::endl;
 }
@@ -592,7 +667,7 @@ TEST_F(FTPClientTest, TestProxyList) {
 
       m_pFTPClient->SetProxy(PROXY_SERVER);
 
-      ASSERT_TRUE(m_pFTPClient->List("/", strList));
+      ASSERT_TRUE(m_pFTPClient->List("/upload/documents", strList));
       EXPECT_FALSE(strList.empty());
    } else
       std::cout << "HTTP Proxy tests are disabled !" << std::endl;
@@ -886,7 +961,7 @@ TEST_F(SFTPClientTest, TestCreateAndRemoveDirectory) {
 }  // namespace embeddedmz
 
 int main(int argc, char** argv) {
-   if (argc > 1 && GlobalTestInit(argv[1]))  // loading test parameters from the INI file...
+   if (GlobalTestInit() ) // loading test parameters from the INI file...
    {
       ::testing::InitGoogleTest(&argc, argv);
       int iTestResults = RUN_ALL_TESTS();
